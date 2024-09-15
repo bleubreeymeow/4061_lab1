@@ -81,41 +81,39 @@ void fn_diamond_fcc(double *arr){
         arr[24 * i + 1] = (i / ux) % uy * a;
         arr[24 * i + 2] = (i / ux / uy) % uz * a;
         //(1/4 , 1/4 , 1/4) relative to 1st fcc basis atom
-        arr[24 * i + 12] = arr[12 * i] + a * 0.25;
-        arr[24 * i + 13] = arr[12 * i + 1] + a * 0.25;
-        arr[24 * i + 14] = arr[12 * i + 2] + a * 0.25;
+        arr[24 * i + 12] = arr[24 * i] + a * 0.25;
+        arr[24 * i + 13] = arr[24 * i + 1] + a * 0.25;
+        arr[24 * i + 14] = arr[24 * i + 2] + a * 0.25;
 
         //================
         //2nd basis atom at (1/2,1/2,0) from 1st basis atom
-        arr[24 * i + 3] = arr[12 * i] + a * 0.5;
-        arr[24 * i + 4] = arr[12 * i + 1] + a * 0.5;
-        arr[24 * i + 5] = arr[12 * i + 2];
+        arr[24 * i + 3] = arr[24 * i] + a * 0.5;
+        arr[24 * i + 4] = arr[24 * i + 1] + a * 0.5;
+        arr[24 * i + 5] = arr[24 * i + 2];
         //(1/4 , 1/4 , 1/4) relative to 2nd fcc basis atom
-        arr[24 * i + 15] = arr[12 * i + 3] + a * 0.25;
-        arr[24 * i + 16] = arr[12 * i + 4] + a * 0.25;
-        arr[24 * i + 17] = arr[12 * i + 5] + a * 0.25;
+        arr[24 * i + 15] = arr[24 * i + 3] + a * 0.25;
+        arr[24 * i + 16] = arr[24 * i + 4] + a * 0.25;
+        arr[24 * i + 17] = arr[24 * i + 5] + a * 0.25;
 
         //===================
         //3rd basis atom at (1/2,0,1/2) from 1st basis atom
-        arr[24 * i + 6] = arr[12 * i] + a * 0.5;
-        arr[24 * i + 7] = arr[12 * i + 1];
-        arr[24 * i + 8] = arr[12 * i + 2] + a * 0.5;
+        arr[24 * i + 6] = arr[24 * i] + a * 0.5;
+        arr[24 * i + 7] = arr[24 * i + 1];
+        arr[24 * i + 8] = arr[24 * i + 2] + a * 0.5;
         //(1/4 , 1/4 , 1/4) relative to 3rd fcc basis atom
-        arr[24 * i + 18] = arr[12 * i + 6] + a * 0.25;
-        arr[24 * i + 19] = arr[12 * i + 7] + a * 0.25;
-        arr[24 * i + 20] = arr[12 * i + 8] + a * 0.25;
+        arr[24 * i + 18] = arr[24 * i + 6] + a * 0.25;
+        arr[24 * i + 19] = arr[24 * i + 7] + a * 0.25;
+        arr[24 * i + 20] = arr[24 * i + 8] + a * 0.25;
 
         //====================
         //4th basis atom at (0,1/2,1/2) from 1st basis atom
-        arr[24 * i + 9] = arr[12 * i];
-        arr[24 * i + 10] = arr[12 * i + 1] + a * 0.5;
-        arr[24 * i + 11] = arr[12 * i + 2] + a * 0.5;
+        arr[24 * i + 9] = arr[24 * i];
+        arr[24 * i + 10] = arr[24 * i + 1] + a * 0.5;
+        arr[24 * i + 11] = arr[24 * i + 2] + a * 0.5;
         //(1/4 , 1/4 , 1/4) relative to 4th fcc basis atom
-        arr[24 * i + 21] = arr[12 * i + 9] + a * 0.25;
-        arr[24 * i + 22] = arr[12 * i + 10] + a * 0.25;
-        arr[24 * i + 23] = arr[12 * i + 11] + a * 0.25;
-
-
+        arr[24 * i + 21] = arr[24 * i + 9] + a * 0.25;
+        arr[24 * i + 22] = arr[24 * i + 10] + a * 0.25;
+        arr[24 * i + 23] = arr[24 * i + 11] + a * 0.25;
     }
     return;
 }
