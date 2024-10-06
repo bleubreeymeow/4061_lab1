@@ -7,7 +7,6 @@
 #define BCC_STR "bcc2"
 #define FCC_STR "fcc2"
 #define DIAMOND_FCC_STR "diamond2"
-#define ELEMENT_STR "Si2"
 
 int ux , uy , uz;
 double a_constant;
@@ -84,7 +83,7 @@ void read_input(){
 
 void file_writing(char *lattice_structure, double **arr, int num){
     char lattice_filename[50];
-    snprintf(lattice_filename, sizeof(lattice_filename), "LAB_%s_neighb_list.txt", lattice_structure); //create filename
+    snprintf(lattice_filename, sizeof(lattice_filename), "LAB1_%s_neighb_list.txt", lattice_structure); //create filename
     FILE *filepointer = fopen(lattice_filename, "w");
     for (int i = 0; i < num ; i++){
         fprintf(filepointer,"%.0lf \t %.0lf \t %lf \n",arr[i][0], arr[i][1] , arr[i][2]);
@@ -231,9 +230,7 @@ void FN_generate_neighbour_list(char *name, double** coords, int size){
     }
 
     double distance_cutoff = fn_distance_cutoff(name);
-
     int neighbour_num = fn_neighbour_list(neighbour_list, coords, size,distance_cutoff);
-
     file_writing(name, neighbour_list, neighbour_num);
 
     free(neighbour_list);
@@ -266,44 +263,42 @@ double fn_pbc(double* t){
 
 int fn_neighbour_list(double **target, double **source, int size, double distance_cutoff){
     double distance = 0;
-    int k = 0;
+    int nearest_neighbour_num = 0;
     double t[3];
 
     for(int i = 0 ; i < size ; i++){
         for(int j = 0 ; j < size ; j++){ //j = i + 1 to avoid double counting (1 2 , 2 1), i + 1 for skipping (0 0) , (1 1)
             if(i == j){continue;}
-                t[0] = source[j][0] - source[i][0]; //dx
-                t[1] = source[j][1] - source[i][1]; //dy
-                t[2] = source[j][2] - source[i][2]; //dz
 
+            t[0] = source[j][0] - source[i][0]; //dx
+            t[1] = source[j][1] - source[i][1]; //dy
+            t[2] = source[j][2] - source[i][2]; //dz
             distance = fn_pbc(t);
 
-            if(distance <= distance_cutoff){
-                target[k][0] = i;
-                target[k][1] = j;
-                target[k][2] = distance;
-
-                k = k + 1;
+            if(distance <= distance_cutoff){ //evaulate whether atom i and atom j are nearest neighbours
+                target[nearest_neighbour_num][0] = i;
+                target[nearest_neighbour_num][1] = j;
+                target[nearest_neighbour_num][2] = distance;
+                nearest_neighbour_num = nearest_neighbour_num + 1;
             }
         }
     }
-    return k;
+    return nearest_neighbour_num;
 }
 
 double fn_distance_cutoff(char *name){ //calculate the distance cutoff for each type of structure
     double distance_cutoff = 0;
     if(name == SC_STR){
-        distance_cutoff = a_constant + 0.001;
+        distance_cutoff = (a_constant) * 1.001;
     }
     if(name == BCC_STR){
-        distance_cutoff = a_constant * sqrt(3) * 0.5 + 0.001;
-       
+        distance_cutoff = (a_constant * sqrt(3) * 0.5) * 1.001;
     }
     if(name == FCC_STR){
-        distance_cutoff = a_constant * sqrt(2) * 0.5 + 0.001;
+        distance_cutoff = (a_constant * sqrt(2) * 0.5) * 1.001;
     }
     if(name == DIAMOND_FCC_STR){
-        distance_cutoff = a_constant * sqrt(3) * 0.25 + 0.001;
+        distance_cutoff = (a_constant * sqrt(3) * 0.25) * 1.001;
     }
     return distance_cutoff;
 }
