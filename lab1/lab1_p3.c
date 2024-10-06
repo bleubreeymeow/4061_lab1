@@ -3,37 +3,25 @@
 #include <math.h>
 #include <string.h>
 
-#define SC_STR "sc2"
-#define BCC_STR "bcc2"
-#define FCC_STR "fcc2"
-#define DIAMOND_FCC_STR "diamond2"
+#define FCC_STR "fcc3"
 #define EPSILON_kB  33.921
 #define k_B 1.380649E-23
 //#define EPSILON //epilson for Ne
-#define SIGMA 3.3952 //sigma for Ne (unit of angstroms)
+#define SIGMA 3.4 //sigma for Ar (unit of angstroms) 3.3952
 
-
-double epsilon = EPSILON_kB * k_B;
+double epsilon = 0.01034;
 int ux , uy , uz;
 double a_constant;
 double distance_cutoff;
 int atom_num;
-int bcc_atom_num;
 int fcc_atom_num;
-int diamond_atom_num;
 double volume;
 double b[3][3]; //reciprocal unit cell vectors
 double a[3][3]; //unit cell vectors
 
-double **sc_atom_coords = NULL;
-double **bcc_atom_coords = NULL;
 double **fcc_atom_coords = NULL;
-double **diamond_atom_coords = NULL;
-
-double **sc_neighbour_list = NULL;
-double **bcc_neighbour_list = NULL;
 double **fcc_neighbour_list = NULL;
-double **diamond_neighbour_list = NULL;
+
 
 void read_input(){
     //user input for periodicity
@@ -109,12 +97,6 @@ void fn_simplecubic(double **atom_coords){
     return;
 }
 
-void fn_bcc(double **atom_coords){
-    fn_simplecubic(atom_coords); //construct a simple cubic lattice
-    fn_shift_coords(atom_coords, atom_num, 0.5); //adding an atom to each basis atom at (a/2 , a/2 , a/2) relative to the basis atom
-    return;
-}
-
 void fn_fcc(double **atom_coords){
     fn_simplecubic(atom_coords); //construct a simple cubic lattice
     for (int i = atom_num; i < atom_num * 4; i += 3) {
@@ -135,44 +117,19 @@ void fn_fcc(double **atom_coords){
     return;
 }
 
-void fn_diamond_fcc(double **atom_coords){
-    fn_fcc(atom_coords);
-    //an atom placed at (a/4 , a/4 , a/4) relative to each fcc atom
-    fn_shift_coords(atom_coords, atom_num * 4, 0.25);
-    return;
-}
 
 void FN_atom_coords(){
     atom_num = ux * uy * uz;
-    bcc_atom_num = atom_num * 2;
     fcc_atom_num = atom_num * 4;
-    diamond_atom_num = atom_num * 8;
 
     //initialise 2D array for atom coords (initialise a atom_num x 3 array)
-    sc_atom_coords = (double **)malloc(atom_num* sizeof(double *));
-    for (int i = 0; i < atom_num; i++){
-        sc_atom_coords[i] = (double *)malloc(3 * sizeof(double));
-    }
-
-    bcc_atom_coords = (double **)malloc(bcc_atom_num* sizeof(double *));
-    for (int i = 0; i < bcc_atom_num; i++){
-        bcc_atom_coords[i] = (double *)malloc(3 * sizeof(double));
-    }
-
     fcc_atom_coords = (double **)malloc(fcc_atom_num* sizeof(double *));
     for (int i = 0; i < fcc_atom_num; i++){
         fcc_atom_coords[i] = (double *)malloc(3 * sizeof(double));
     }
 
-    diamond_atom_coords = (double **)malloc(diamond_atom_num* sizeof(double *));
-    for (int i = 0; i < diamond_atom_num; i++){
-        diamond_atom_coords[i] = (double *)malloc(3 * sizeof(double));
-    }
-
-    fn_simplecubic(sc_atom_coords);
-    fn_bcc(bcc_atom_coords);
     fn_fcc(fcc_atom_coords);
-    fn_diamond_fcc(diamond_atom_coords);
+
     return;
 }
 
@@ -227,27 +184,19 @@ int fn_neighbour_list(double **target, double **source, int size, double distanc
     return nearest_neighbour_num;
 }
 
-double fn_distance_cutoff(char *name){ //calculate the distance cutoff for each type of structure
+double fn_distance_cutoff(){ //calculate the distance cutoff for each type of structure
     double distance_cutoff = 0;
-    if(name == SC_STR){
-        distance_cutoff = (a_constant) * 1.001;
-    }
-    if(name == BCC_STR){
-        distance_cutoff = (a_constant * sqrt(3) * 0.5) * 1.001;
-    }
-    if(name == FCC_STR){
-        distance_cutoff = (a_constant * sqrt(2) * 0.5) * 1.001;
-    }
-    if(name == DIAMOND_FCC_STR){
-        distance_cutoff = (a_constant * sqrt(3) * 0.25) * 1.001;
-    }
+    distance_cutoff = (a_constant * sqrt(2) * 0.5) * 1.001;
     return distance_cutoff;
 }
 
 double fn_LJ_potential(double** neighbour_list, int size){
     double potential = 0;
-    for(int i = 0 ; i < size ; i++){
-        potential += (((SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2])
+    potential = 4 * epsilon * (pow(SIGMA / neighbour_list[0][2] , 12) - pow(SIGMA / neighbour_list[0][2] , 6))* size;
+    //for(int i = 0 ; i < size ; i++){
+        //potential += 4 * epsilon * (pow(SIGMA / neighbour_list[i][2] , 12) - pow(SIGMA / neighbour_list[i][2] , 6));
+        
+        /*(((SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2])
                                     * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]) 
                                     * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]) 
                                     * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2])
@@ -257,9 +206,11 @@ double fn_LJ_potential(double** neighbour_list, int size){
                                     ((SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2])
                                     * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]) 
                                     * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]))); 
-
-    }
-    potential = 4 * epsilon * potential;
+                                    */
+                    
+            //printf("debug potential %lf\n",potential);
+    //}
+    //potential = 4 * epsilon * potential;
 
     return potential;
 }
@@ -275,10 +226,9 @@ void FN_generate_neighbour_list(char *name, double** coords, int size){
     int neighbour_num = fn_neighbour_list(neighbour_list, coords, size,distance_cutoff);
 
     double LJ_potential = fn_LJ_potential(neighbour_list, neighbour_num);
-    printf("%s Ar LJ potential(joules): %e\n", name, LJ_potential);
-
-    LJ_potential = LJ_potential / (1.6E-19);
+    printf("neighbour_num = %d",neighbour_num);
     printf("%s Ar LJ potential(eV): %e\n", name, LJ_potential);
+
     //file_writing(name, neighbour_list, neighbour_num);
 
     free(neighbour_list);
@@ -293,22 +243,12 @@ void FN_generate_neighbour_list(char *name, double** coords, int size){
 int main(){
     read_input(); 
 
-
-    
-    printf("global epsilon = %e \n", epsilon);
-
     FN_a_vect(); //initialise a1 a2 a3 cell vectors
     FN_reciprocal(); //calculate the reciprocal vectors and the volume
     FN_atom_coords(); //generate sc, bcc, fcc and diamond coordinates
 
-    //generate sc neighbour list
-    FN_generate_neighbour_list(SC_STR, sc_atom_coords, atom_num);
-    //generate bcc neighbour list
-    FN_generate_neighbour_list(BCC_STR, bcc_atom_coords, bcc_atom_num);
     //generate fcc neighbour list
     FN_generate_neighbour_list(FCC_STR, fcc_atom_coords, fcc_atom_num);
-    //generate diamond neighbour list
-    FN_generate_neighbour_list(DIAMOND_FCC_STR, diamond_atom_coords, diamond_atom_num);
 
     return 0;
 }
