@@ -4,15 +4,12 @@
 #include <string.h>
 
 #define FCC_STR "fcc3"
-#define EPSILON_kB  33.921
-#define k_B 1.380649E-23
-#define SIGMA 3.405 //sigma for Ar (unit of angstroms) 3.3952
-#define EPSILON 0.01032
+#define SIGMA 3.40 //sigma for Ar (unit of angstroms) 
+#define EPSILON 0.0104233206
 
-
-int ux , uy , uz;
-double a_constant;
-double distance_cutoff;
+int ux = 5 , uy = 5 , uz = 5;
+double a_constant = 5.31;
+double distance_cutoff = 2.5 * SIGMA;
 int atom_num;
 int fcc_atom_num;
 double volume;
@@ -23,30 +20,13 @@ double **fcc_atom_coords = NULL;
 double **fcc_neighbour_list = NULL;
 
 
-void read_input(){
-    //user input for periodicity
-    printf("periodicity along x: \n");
-    scanf("%d", &ux);
-    printf("periodicity along y: \n");
-    scanf("%d", &uy);
-    printf("periodicity along z: \n");
-    scanf("%d", &uz);
-    printf("input lattice constant\n");
-    scanf("%lf", &a_constant);
-    printf("input distance cutoff\n");
-    scanf("%lf", &distance_cutoff);
-}
-
-void file_writing(char *lattice_structure, double **arr, int num){
-    char lattice_filename[50];
-    snprintf(lattice_filename, sizeof(lattice_filename), "LJ_%s_neighb_list.txt", lattice_structure); //create filename
-    FILE *filepointer = fopen(lattice_filename, "w");
-    //fprintf(filepointer,"%d \n \n",(num));
-    for (int i = 0; i < num ; i++){
-        fprintf(filepointer,"%.0lf \t %.0lf \t %lf \n",arr[i][0], arr[i][1] , arr[i][2]);
-    }
-    fclose(filepointer);
-}
+void FN_a_vect();
+void fn_cross_product(int idx1 , int idx2 , int idx3);
+double fn_2pi_triple_product();
+void FN_reciprocal();
+void fn_shift_coords(double **atom_coords, int count, double shift_factor);
+void fn_simplecubic(double **atom_coords);
+double fn_LJ_potential(double** neighbour_list, int size);
 
 /*b1 b2 b3 VECTOR GENERATION=============================================================================================*/
 void FN_a_vect(){
@@ -73,7 +53,6 @@ void fn_cross_product(int idx1 , int idx2 , int idx3){ //b_(idx1 + 1) = a_(idx2 
 
 double fn_2pi_triple_product(){
     volume = (a[0][0] * b[0][0] + a[0][1] * b[0][1] + a[0][2] * b[0][2]);
-    //double answer = (2 * M_PI)/volume;
     double answer = 1/volume;
     return answer;
 }
@@ -153,7 +132,7 @@ double fn_pbc(double* t){
     double n[3];
     double difference_plus = 0 , difference_minus = 0;
     for(int i = 0 ; i < 3 ; i++){
-        //n[i] = fmod((t[0] * b[i][0] + t[1] * b[i][1] + t[2] * b[i][2])/(2 * M_PI) , 1); //generate fractional numbers
+        //generate fractional numbers
         n[i] = fmod((t[0] * b[i][0] + t[1] * b[i][1] + t[2] * b[i][2]) , 1);
         //apply periodic boundary conditions [-0.5 , 0.5)
         if(n[i] > 0.5){
@@ -196,21 +175,7 @@ int fn_neighbour_list(double **target, double **source, int size){
             }
         }
     }
-
     return nearest_neighbour_num;
-}
-
-double fn_LJ_potential(double** neighbour_list, int size){
-    double potential = 0;
-    for(int i = 0 ; i < size ; i++){
-        double R_3 = (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]);
-        double R_6 = R_3 * R_3;
-        potential += 4* EPSILON *((R_6 * R_6) - R_6);
-        //printf("debug potential %lf\n",potential);
-    }
-
-
-    return potential;
 }
 
 void FN_generate_neighbour_list(char *name, double** coords, int size){
@@ -220,18 +185,10 @@ void FN_generate_neighbour_list(char *name, double** coords, int size){
         neighbour_list[i] = (double *)malloc(3 * sizeof(double));
     }
 
-
     int neighbour_num = fn_neighbour_list(neighbour_list, coords, size);
-
-    //for (int i = 0; i < size ; i++){
-        //printf("%.0lf \t %.0lf \t %lf \n",neighbour_list[i][0], neighbour_list[i][1] , neighbour_list[i][2]);
-    //}
-
     double LJ_potential = fn_LJ_potential(neighbour_list, neighbour_num);
 
-    printf("%s Ar LJ potential per atom(eV): %lf\n", name, LJ_potential/(fcc_atom_num));
-
-    file_writing(name, neighbour_list, neighbour_num);
+    printf("Ar LJ potential (eV): %lf\n", (LJ_potential/(size)));
 
     free(neighbour_list);
     free(coords);
@@ -240,10 +197,18 @@ void FN_generate_neighbour_list(char *name, double** coords, int size){
 
 /*LJ POTENTIAL CALCULATION==========================================================================================*/
 
+double fn_LJ_potential(double** neighbour_list, int size){
+    double potential = 0;
+    for(int i = 0 ; i < size ; i++){
+        double R_3 = (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]) * (SIGMA / neighbour_list[i][2]);
+        double R_6 = R_3 * R_3;
+        potential += 4* EPSILON *((R_6 * R_6) - R_6);
+    }
+    return potential;
+}
 
 /*MAIN==============================================================================================================*/
 int main(){
-    read_input(); 
 
     FN_a_vect(); //initialise a1 a2 a3 cell vectors
     FN_reciprocal(); //calculate the reciprocal vectors and the volume
@@ -254,3 +219,4 @@ int main(){
 
     return 0;
 }
+

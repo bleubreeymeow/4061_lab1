@@ -1,0 +1,6 @@
+git add ./file.c
+git commit -m "enter any comments"
+git push -u origin main
+
+if there were changes made in the remote branch, override the local branch:
+git push -f

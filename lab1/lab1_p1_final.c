@@ -21,6 +21,42 @@ void fn_bcc(double **arr);
 void fn_fcc(double **arr);
 void fn_diamond_fcc(double **arr);
 
+int main(){
+    //user input for periodicity
+    printf("input ux: \n");
+    scanf("%d", &ux);
+    printf("input uy: \n");
+    scanf("%d", &uy);
+    printf("input uz: \n");
+    scanf("%d", &uz);
+    printf("input a: \n");
+    scanf("%lf", &a);
+
+    atom_num = ux * uy * uz;
+
+    //initialise 2D array for lattice. rows = sc atom number*8 for maximum number of atoms (diamond structure)
+    double **arr = (double **)malloc(atom_num * 8 * sizeof(double *));
+    for (int i = 0; i < atom_num * 8; i++){
+        arr[i] = (double *)malloc(3 * sizeof(double));
+    }
+
+    fn_simplecubic(arr);
+    file_writing(SC_STR, arr, atom_num);
+
+    fn_bcc(arr);
+    file_writing(BCC_STR, arr, atom_num * 2);
+
+    fn_fcc(arr);
+    file_writing(FCC_STR, arr, atom_num * 4);
+
+    fn_diamond_fcc(arr);
+    file_writing(DIAMOND_FCC_STR, arr, atom_num * 8);
+    printf("The structure of sc, bcc, fcc and diamond crystalline structures has been outputted!");
+    free(arr);
+
+    return 0;
+}
+
 void file_writing(char *lattice_structure, double **arr, int num){
     char lattice_filename[50];
     snprintf(lattice_filename, sizeof(lattice_filename), "lab1_%s.xyz", lattice_structure); //create filename
@@ -81,41 +117,4 @@ void fn_diamond_fcc(double **arr){
     //an atom placed at (a/4 , a/4 , a/4) relative to each fcc atom
     shift_coords(arr, atom_num * 4, 0.25);
     return;
-}
-
-int main(){
-    //user input for periodicity
-    printf("input ux: \n");
-    scanf("%d", &ux);
-    printf("input uy: \n");
-    scanf("%d", &uy);
-    printf("input uz: \n");
-    scanf("%d", &uz);
-    printf("input a: \n");
-    scanf("%lf", &a);
-
-    atom_num = ux * uy * uz;
-
-    //initialise 2D array for lattice. rows = sc atom number*8 for maximum number of atoms (diamond structure)
-    double **arr = (double **)malloc(atom_num * 8 * sizeof(double *));
-    for (int i = 0; i < atom_num * 8; i++){
-        arr[i] = (double *)malloc(3 * sizeof(double));
-    }
-
-    fn_simplecubic(arr);
-    file_writing(SC_STR, arr, atom_num);
-
-    fn_bcc(arr);
-    file_writing(BCC_STR, arr, atom_num * 2);
-
-    fn_fcc(arr);
-    file_writing(FCC_STR, arr, atom_num * 4);
-
-    fn_diamond_fcc(arr);
-    file_writing(DIAMOND_FCC_STR, arr, atom_num * 8);
-    printf("The structure of sc, bcc, fcc and diamond crystalline structures has been outputted!");
-    free(arr);
-
-
-    return 0;
 }

@@ -3,27 +3,26 @@
 #include <math.h>
 #include <string.h>
 
-#define FCC_STR "fcc2_MgO"
-#define COULOMB 1./(4.*M_PI*0.005526349406) //8.9875
-#define ELEMENTARY_CHARGE 1//1.602E-19
-#define A_Mg_Mg 423.989 //0
-#define B_Mg_Mg 3.15
-#define RHO_Mg_Mg 1./3.15 //0
-#define C_Mg_Mg 1.049 //0
+#define FCC_STR "fcc"
+#define COULOMB 1./(4.*M_PI*0.005526349406) 
+#define A_Na_Na 423.989 
+#define B_Na_Na 3.15
+#define RHO_Na_Na 1./3.15 
+#define C_Na_Na 1.049
 
-#define A_Mg_O  1216.35 //821.6
-#define B_Mg_O 3.15
-#define RHO_Mg_O 1./3.15 //0.3242
-#define C_Mg_O 8.71 //0
+#define A_Na_Cl  1216.35 
+#define B_Na_Cl 3.15
+#define RHO_Na_Cl 1./3.15 //0.3242
+#define C_Na_Cl 8.71 //0
 
-#define A_O_O 3489.506//22764.0
-#define B_O_O 3.15
-#define RHO_O_O 1./3.15// 0.149
-#define C_O_O  72.3708//27.88
+#define A_Cl_Cl 3489.506//22764.0
+#define B_Cl_Cl 3.15
+#define RHO_Cl_Cl 1./3.15// 0.149
+#define C_Cl_Cl  72.3708//27.88
 
 int ux = 5, uy = 5 , uz = 5;
-double a_constant = 5.578; //5.61;
-double distance_cutoff = 5.578 * 5; //19.9; //maybe future caluclations for different cutoff distance from lattice constant
+double a_constant = 5.578; 
+double distance_cutoff = 5.578 * 5; //maybe future caluclations for different cutoff distance from lattice constant
 int atom_num;
 double volume;
 double b[3][3]; //reciprocal unit cell vectors
@@ -200,24 +199,21 @@ double fn_coulomb_buck_potential(double** neighbour_list, int size){
     double r = 0; 
 
     for(int i = 0 ; i < size ; i++){
-        //r_6 = neighbour_list[i][2]* neighbour_list[i][2] *  neighbour_list[i][2]* neighbour_list[i][2] *  neighbour_list[i][2]* neighbour_list[i][2];
         r = neighbour_list[i][2];
         r_6 = r * r * r * r * r * r;
-        if(neighbour_list[i][3] == 2){ //Mg-Mg interaction
+        if(neighbour_list[i][3] == -2){ //Mg-Mg interaction
             temp_potential = COULOMB / r + A_Mg_Mg * exp(-r * B_Mg_Mg) - C_Mg_Mg / r_6 ;
             neighbour_list[i][4] = temp_potential;
         }
         if(neighbour_list[i][3] == 0){ //Mg-O interaction
-            temp_potential = (-COULOMB  / (r))+ (A_Mg_O * exp(-r * B_Mg_O)) - (C_Mg_O / r_6);
+            temp_potential = (-COULOMB  / r)+ (A_Mg_O * exp(-r * B_Mg_O)) - (C_Mg_O / r_6);
             neighbour_list[i][4] = temp_potential;
         }
-        if(neighbour_list[i][3] == -2){ //O-O interaction
+        if(neighbour_list[i][3] == 2){ //O-O interaction
             temp_potential = ( COULOMB / r) + A_O_O * exp(-r * B_O_O) - (C_O_O / r_6);
             neighbour_list[i][4] = temp_potential;
         }
-        printf("%lf\n",temp_potential);
         potential += temp_potential;
-
     }
     return potential;
 }

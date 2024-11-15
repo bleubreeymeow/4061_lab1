@@ -4,23 +4,27 @@
 #include <string.h>
 
 #define FCC_STR "fcc"
-#define COULOMB 1./(4.*M_PI*0.005526349406) 
-#define A_Na_Na 0.
-#define RHO_Na_Na 0.
-#define C_Na_Na 0.
 
-#define A_Na_Cl  872.7
-#define RHO_Na_Cl 0.3341
+#define A_Na_Na 7895.4
+#define RHO_Na_Na 0.1709
+#define C_Na_Na 29.06
+
+#define A_Na_Cl 2314.7
+#define RHO_Na_Cl 0.2903
 #define C_Na_Cl 0.
 
 #define A_Cl_Cl 1227.2
 #define RHO_Cl_Cl 0.3214
-#define C_Cl_Cl  165.4
+#define C_Cl_Cl  29.06
 
+#define Z_NA 0.988
+#define Z_CL 0.988
 
-int ux = 10, uy = 10 , uz = 10;
-double a_constant = 5.52/2; 
-double distance_cutoff = 14; //maybe future caluclations for different cutoff distance from lattice constant
+#define COULOMB (Z_NA * Z_CL)/(4.*M_PI*0.005526349406) 
+
+int ux = 10, uy = 10 , uz = 10; //since the Na and Cl atoms are alternating, the peroidicity is being multipled by a factor of 2
+double a_constant = 5.64/2; //the distance between Na and the nearest neighbour (Cl)
+double distance_cutoff = 10* (5.64); //large enough cutoff
 int atom_num;
 double volume;
 double b[3][3]; //reciprocal unit cell vectors
@@ -29,18 +33,6 @@ double **sc_atom_coords = NULL;
 double **sc_neighbour_list = NULL;
 
 /*FUNCTIONS================================================================================================================*/
-
-
-void file_writing(char *lattice_structure, double **arr, int num){
-    char lattice_filename[50];
-    snprintf(lattice_filename, sizeof(lattice_filename), "DEBUG_%s_neighb_list.txt", lattice_structure); //create filename
-    FILE *filepointer = fopen(lattice_filename, "w");
-    for (int i = 0; i < num ; i++){
-       fprintf(filepointer,"%.0lf \t %.0lf \t %lf \t %lf \t %lf\n",arr[i][0], arr[i][1] , arr[i][2], arr[i][3], arr[i][4]);
-    }
-    printf("neighbour list of %s has been printed!\n",lattice_structure);
-    fclose(filepointer);
-}
 
 /*b1 b2 b3 VECTOR GENERATION=============================================================================================*/
 void FN_a_vect(){
@@ -156,7 +148,7 @@ int fn_neighbour_list(double **target, double **source, int size){
     double distance = 0;
     int nearest_neighbour_num = 0;
     double t[3];
-    int interaction_type = 0; //if both are Mg atoms, interaction = -2, if one is Mg , one is O, interaction = 0 , if both oxygen, interaction = 2
+    int interaction_type = 0; //if both are Na atoms, interaction = -2, if one is Na , one is Cl, interaction = 0 , if both are Cl, interaction = 2
 
     for(int i = 0 ; i < size ; i++){
         for(int j = i + 1 ; j < size ; j++){ //j = i + 1 to avoid double counting (1 2 , 2 1), i + 1 for skipping (0 0) , (1 1)
@@ -189,16 +181,15 @@ double fn_coulomb_buck_potential(double** neighbour_list, int size){
     for(int i = 0 ; i < size ; i++){
         r = neighbour_list[i][2];
         r_6 = r * r * r * r * r * r;
-        if(neighbour_list[i][3] == -2){ //Mg-Mg interaction
-            temp_potential = COULOMB / r ; //+ A_Na_Na * exp(-r /RHO_Na_Na) - C_Na_Na / r_6 ;
+        if(neighbour_list[i][3] == -2){ //Na-Na interaction
+            temp_potential = COULOMB / r + A_Na_Na * exp(-r /RHO_Na_Na) - C_Na_Na / r_6 ;
         }
-        if(neighbour_list[i][3] == 0){ //Mg-O interaction
+        if(neighbour_list[i][3] == 0){ //Na-Cl interaction
             temp_potential = (-COULOMB  / r)+ (A_Na_Cl * exp(-r / RHO_Na_Cl)) - (C_Na_Cl / r_6);
         }
-        if(neighbour_list[i][3] == 2){ //O-O interaction
+        if(neighbour_list[i][3] == 2){ //Cl-Cl interaction
             temp_potential = ( COULOMB / r) + A_Cl_Cl * exp(-r / RHO_Cl_Cl) - (C_Cl_Cl / r_6);
         }
-        //printf("debug potential %lf\n",temp_potential);
         potential += temp_potential;
     }
     return potential;
@@ -213,33 +204,19 @@ void FN_neighbour_buck_pot(char *name, double** coords, int size){
 
     int neighbour_num = fn_neighbour_list(neighbour_list, coords, size);
     double coulomb_buck_potential = fn_coulomb_buck_potential(neighbour_list, neighbour_num);
-    file_writing(name, neighbour_list, neighbour_num);
-    printf("\n %s coulomb buckingham potential(eV): %lf\n", name, coulomb_buck_potential);
+    printf("\n NaCl coulomb buckingham potential per atom(eV): %lf\n", 2* coulomb_buck_potential/(size)); //multiply by two because its the potential per ion pair
+
 
     free(neighbour_list);
     free(coords);
 }
-
-void file_writing_coords(char *lattice_structure, double **arr, int num){
-    char lattice_filename[50];
-    snprintf(lattice_filename, sizeof(lattice_filename), "DEBUG_%s_atom_coords.txt", lattice_structure); //create filename
-    FILE *filepointer = fopen(lattice_filename, "w");
-    for (int i = 0; i < num ; i++){
-        fprintf(filepointer,"%lf \t %lf \t %lf \t %.0lf\n",arr[i][0], arr[i][1] , arr[i][2], arr[i][3]);
-    }
-    printf("neighbour list of %s has been printed!\n",lattice_structure);
-    fclose(filepointer);
-}
-
-
 
 /*MAIN==============================================================================================================*/
 int main(){
     FN_a_vect(); //initialise a1 a2 a3 cell vectors
     FN_reciprocal(); //calculate the reciprocal vectors and the volume
     FN_atom_coords(); //generate fcc coordinates
-    file_writing_coords(FCC_STR,sc_atom_coords,atom_num);
-    //generate fcc neighbour list
+    //generate fcc neighbour list and calculate the columb buckingham potential
     FN_neighbour_buck_pot(FCC_STR, sc_atom_coords, atom_num);
 
     return 0;

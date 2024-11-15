@@ -34,7 +34,7 @@ void fl(double (*s)[4][4], double (*a)[4], double *c) {
 
 int main() {
 
-    printf("Matrix:\n");
+    printf("inverted matrix:\n");
     double a[4][4] = { {1, 2, 3, 4 }, {0, 1, 0 , 2} , {0 , 0 , 1 , 3} , {0 , 0 , 0 , 1}};
 
 

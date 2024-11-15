@@ -16,15 +16,15 @@ double a;
 
 void file_writing(char *lattice_structure, double **arr, int num){
     char lattice_filename[50];
-    snprintf(lattice_filename, sizeof(lattice_filename), "lab1_%s.xyz", lattice_structure);
+    snprintf(lattice_filename, sizeof(lattice_filename), "lab1_%s.txt", lattice_structure);
 
     FILE *filepointer = fopen(lattice_filename, "w");
     
-    fprintf(filepointer,"%d \n \n",(num));
+    //fprintf(filepointer,"%d \n \n",(num));
 
     for (int i = 0; i < num ; i++){
-        fprintf(filepointer,"%s \t %lf \t %lf \t %lf \n", ELEMENT_STR, arr[i][0], arr[i][1] , arr[i][2]);
-        //MATLAB fprintf(filepointer,"%lf \t %lf \t %lf \n",arr[i][0], arr[i][1] , arr[i][2]);
+        //fprintf(filepointer,"%s \t %lf \t %lf \t %lf \n", ELEMENT_STR, arr[i][0], arr[i][1] , arr[i][2]);
+        fprintf(filepointer,"%lf \t %lf \t %lf \n",arr[i][0], arr[i][1] , arr[i][2]);
     }
 
     fclose(filepointer);
@@ -46,9 +46,9 @@ void fn_bcc(double **arr){
         arr[i][1] = (i / ux) % uy * a;
         arr[i][2] = (i / ux / uy) % uz * a;
         //2nd basis atom at (a/2, a/2, a/2) relative to 1st basis atom
-        arr[i + 1][0] = arr[i][0] + a * 0.5;
-        arr[i + 1][1] = arr[i][1] + a * 0.5;
-        arr[i + 1][2] = arr[i][2] + a * 0.5;
+        arr[i + 1][0] = arr[i][0] + (a * 0.5);
+        arr[i + 1][1] = arr[i][1] + (a * 0.5);
+        arr[i + 1][2] = arr[i][2] + (a * 0.5);
     }
     return;
 }
@@ -85,7 +85,6 @@ void fn_diamond_fcc(double **arr){
         arr[i + 1][0] = arr[i][0] + a * 0.25;
         arr[i + 1][1] = arr[i][1] + a * 0.25;
         arr[i + 1][2] = arr[i][2] + a * 0.25;
-
         //================
         //2nd basis atom at (a/2, a/2, 0) from 1st basis atom
         arr[i + 2][0] = arr[i][0] + a * 0.5;
@@ -95,7 +94,6 @@ void fn_diamond_fcc(double **arr){
         arr[i + 3][0] = arr[i + 2][0] + a * 0.25;
         arr[i + 3][1] = arr[i + 2][1] + a * 0.25;
         arr[i + 3][2] = arr[i + 2][2] + a * 0.25;
-
         //===================
         //3rd basis atom at (a/2, 0, a/2) from 1st basis atom
         arr[i + 4][0] = arr[i][0] + a * 0.5;
@@ -105,7 +103,6 @@ void fn_diamond_fcc(double **arr){
         arr[i + 5][0] = arr[i + 4][0] + a * 0.25;
         arr[i + 5][1] = arr[i + 4][1] + a * 0.25;
         arr[i + 5][2] = arr[i + 4][2] + a * 0.25;
-
         //====================
         //4th basis atom at (0, a/2, a/2) from 1st basis atom
         arr[i + 6][0] = arr[i][0];
@@ -116,6 +113,10 @@ void fn_diamond_fcc(double **arr){
         arr[i + 7][1] = arr[i + 6][1] + a * 0.25;
         arr[i + 7][2] = arr[i + 6][2] + a * 0.25;
     }
+        
+    
+    //an atom placed at (a/4 , a/4 , a/4) relative to each fcc atom
+
     return;
 }
 
