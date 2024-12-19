@@ -10,13 +10,13 @@
 #define FINAL_STR "final"
 #define SIGMA 3.40 //sigma for Ar (unit of angstroms) 
 #define EPSILON 0.0104233206
-#define UX 3
-#define UY 3
-#define UZ 3
+#define UX 5
+#define UY 5
+#define UZ 5
 #define A_CONSTANT 5.31
 
- //10.5 * SIGMA;
-double distance_cutoff;  
+
+double distance_cutoff = 2.5 * SIGMA;  
 int atom_num = UX * UY * UZ;
 int fcc_atom_num = UX * UY * UZ * 4;
 double volume;
@@ -131,7 +131,7 @@ void fn_fcc(double **coords){
 
 /*INITIALISATION=====================================================================================================*/
 void FN_initialise(double** atom_coords){
-    distance_cutoff = A_CONSTANT/sqrt(2) + 0.001;
+
     fn_a_vect(); //initialise a1 a2 a3 cell vectors
     fn_reciprocal(); //calculate the reciprocal vectors and the volume
     fn_fcc(atom_coords); //generate fcc coordinates
@@ -142,8 +142,8 @@ void FN_initialise(double** atom_coords){
 
 /*PERTURBATING ATOMS================================================================================================*/
 void FN_perturbate(double** atom_coords){
-    double min = -0.5;
-    double max = 1.5;
+    double min = 0.0;
+    double max = 0.5;
     for(int i = 0 ; i < fcc_atom_num ; i++){
         for(int j = 0 ; j < 3 ; j++){
             double random = (rand() * (max - min) / RAND_MAX ) + min;
@@ -186,8 +186,6 @@ int fn_neighbour_list(double **neigh_list, double **atom_coords, int size){
     int nearest_neighbour_num = 0;
     double t[3];
 
-    printf("debug distance cutoff = %lf \n", distance_cutoff);
-
     for(int i = 0 ; i < size ; i++){
         for(int j = i + 1 ; j < size ; j++){ //j = i + 1 to avoid double counting (1 2 , 2 1), i + 1 for skipping (0 0) , (1 1)
 
@@ -196,7 +194,6 @@ int fn_neighbour_list(double **neigh_list, double **atom_coords, int size){
             t[2] = atom_coords[j][2] - atom_coords[i][2]; //dz
             distance = fn_pbc(t);
 
-            printf("debug distance = %lf \n", distance);
             if(distance < distance_cutoff){ //evaulate whether atom i and atom j are nearest neighbours
 
                 neigh_list[nearest_neighbour_num][0] = i;
@@ -206,7 +203,7 @@ int fn_neighbour_list(double **neigh_list, double **atom_coords, int size){
             }
         }
     }
-    printf("debug nearest_neighbour_num = %lf \n", nearest_neighbour_num);
+
     return nearest_neighbour_num;
 }
 
@@ -220,7 +217,6 @@ double fn_LJ_potential(double** neighbour_list, int size){
         double R_6 = R_3 * R_3;
         potential += 4* EPSILON *((R_6 * R_6) - R_6);
     }
-    printf("LJ = %lf\n",potential);
     return potential;
 }
 
@@ -233,8 +229,9 @@ void FN_SD(double** atom_coords){
     double row_num = fcc_atom_num * (fcc_atom_num - 1);
     double **neighbour_list = (double **)malloc(row_num * sizeof(double *));
     for (int j = 0; j < row_num; j++){
-        neighbour_list[i] = (double *)malloc(3 * sizeof(double));
+        neighbour_list[j] = (double *)malloc(3 * sizeof(double));
     }
+
     //create array to hold energy for each SD step
     double *LJ_energy;
     LJ_energy = (double*)malloc(i_max * sizeof(double));
@@ -242,16 +239,15 @@ void FN_SD(double** atom_coords){
     int neighbour_num = fn_neighbour_list(neighbour_list, atom_coords, fcc_atom_num);
     FILE_WRITING(NEIGH_LIST_STR,neighbour_list,neighbour_num);
 
-    printf("neighbour_num = %lf\n",neighbour_num);
     LJ_energy[0] = fn_LJ_potential(neighbour_list, neighbour_num);
+    printf("LJ energy per atom (eV) = %lf \n",LJ_energy[0]/fcc_atom_num);
 
-
-    //while(i < i_max && ){
+    for(i = 0 ; i < i_max ; i++){
         
 
 
-        //i++;
-    //}
+    }
+
 
 
     LJ_FILE_WRITING(LJ_energy,i);
