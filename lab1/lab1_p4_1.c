@@ -4,17 +4,14 @@
 #include <string.h>
 #include <time.h>
 
-#define INITIAL_STR "initial_coords"
-#define PERTURBE_STR "perturbed_coords"
-#define FINAL_STR "final_coords"
-#define NEIGH_LIST_STR "neighb_list"
+#define PERTURBE_STR "BEFORE_SD"
+#define FINAL_STR "AFTER_SD"
 #define SIGMA 3.40 //sigma for Ar (unit of angstroms) 
 #define EPSILON 0.0104233206
 #define UX 5
 #define UY 5
 #define UZ 5
 #define A_CONSTANT 5.31
-
 #define SMALL_SIGMA 1E-3
 
 
@@ -28,7 +25,7 @@ int i_max = 100;
 
 void FILE_WRITING(char *lattice_structure, double **arr, int num){
     char lattice_filename[50];
-    snprintf(lattice_filename, sizeof(lattice_filename), "LAB4_1_%s_SDLJ.txt", lattice_structure); //create filename
+    snprintf(lattice_filename, sizeof(lattice_filename), "LAB4_1_%s.xyz", lattice_structure); //create filename
     FILE *filepointer = fopen(lattice_filename, "w");
     for (int i = 0; i < num ; i++){
         fprintf(filepointer,"%lf \t %lf \t %lf \n",arr[i][0], arr[i][1] , arr[i][2]);
@@ -418,7 +415,6 @@ int main(){
 
     FN_initialise(fcc_atom_coords);
     //initial unpreturbed atom coords
-    FILE_WRITING(INITIAL_STR , fcc_atom_coords,fcc_atom_num);
 
     //perturbed atom coords
     FN_perturbate(fcc_atom_coords);
