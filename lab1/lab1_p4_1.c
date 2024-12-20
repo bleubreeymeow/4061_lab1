@@ -146,7 +146,6 @@ void FN_initialise(double** atom_coords){
 /*PERTURBATING ATOMS================================================================================================*/
 void FN_perturbate(double** atom_coords){
     double min = -0.05;
-    double max = 0.1;
     for(int i = 0 ; i < fcc_atom_num ; i++){
         for(int j = 0 ; j < 3 ; j++){
             double random = (rand() * (0.1) / RAND_MAX ) + min;
@@ -192,19 +191,21 @@ int fn_neighbour_list(int **neigh_list, double **atom_coords, int num, double **
     for(int i = 0 ; i < num ; i++){
         for(int j = i + 1 ; j < num ; j++){ //j = i + 1 to avoid double counting (1 2 , 2 1), i + 1 for skipping (0 0) , (1 1)
 
-            t[0] = atom_coords[j][0] - atom_coords[i][0]; //dx
-            t[1] = atom_coords[j][1] - atom_coords[i][1]; //dy
-            t[2] = atom_coords[j][2] - atom_coords[i][2]; //dz
+            for(int k = 0 ; k < 3 ; k++){
+                t[k] = atom_coords[j][k] - atom_coords[i][k];
+            }
             distance = fn_pbc(t);
 
             if(distance < distance_cutoff){ //evaulate whether atom i and atom j are nearest neighbours
-                vectors[nearest_neighbour_num][0] = t[0];
-                vectors[nearest_neighbour_num][1] = t[1];
-                vectors[nearest_neighbour_num][2] = t[2];
+                for(int k = 0; k < 3 ; k++){
+                    vectors[nearest_neighbour_num][k] = t[k];
+                }
 
                 neigh_list[nearest_neighbour_num][0] = i;
                 neigh_list[nearest_neighbour_num][1] = j;
+
                 neigh_distance[nearest_neighbour_num] = distance;
+
                 nearest_neighbour_num = nearest_neighbour_num + 1;
             }
         }
@@ -217,6 +218,7 @@ int fn_neighbour_list(int **neigh_list, double **atom_coords, int num, double **
 /*LJ POTENTIAL CALCULATION==========================================================================================*/
 
 double fn_LJ_potential(double* neighbour_distance, int neigh_size){
+
     double potential = 0;
     for(int i = 0 ; i < neigh_size ; i++){
         double R_3 = (SIGMA / neighbour_distance[i]) * (SIGMA / neighbour_distance[i]) * (SIGMA / neighbour_distance[i]);
@@ -228,6 +230,7 @@ double fn_LJ_potential(double* neighbour_distance, int neigh_size){
 
 
 double fn_F_prime(double r){
+
     double sigma6 = SIGMA * SIGMA * SIGMA * SIGMA * SIGMA * SIGMA ;
     double sigma12 = sigma6 * sigma6;
 
@@ -240,21 +243,21 @@ double fn_F_prime(double r){
 }
 
 
-void fn_LJ_2nd_derivative(int** neigh_list,int neigh_size, double* neigh_distance , double** vector, double** gradient, int idx0 , int idx1){
+void fn_LJ_derivative(int** neigh_list,int neigh_size, double* neigh_distance , double** vector, double** gradient, int idx0 , int idx1){
 
     for(int i = 0 ; i < neigh_size ; i++){
+        //calculate the magnitude of F prime
         double F_prime = fn_F_prime(neigh_distance[i]);
-        double temp_gradient_x = - F_prime * vector[i][0];
-        double  temp_gradient_y = - F_prime * vector[i][1];
-        double  temp_gradient_z = - F_prime * vector[i][2];
 
-        gradient[neigh_list[i][idx0]][0] += temp_gradient_x;
-        gradient[neigh_list[i][idx0]][1] += temp_gradient_y;
-        gradient[neigh_list[i][idx0]][2] += temp_gradient_z;
+        for(int j = 0 ; j < 3 ; j++){
+            //gradient of atom A in the pair consists of x y z component
+            gradient[neigh_list[i][idx0]][j] += - F_prime * vector[i][j];
+        }
 
-        gradient[neigh_list[i][idx1]][0] -= temp_gradient_x;
-        gradient[neigh_list[i][idx1]][1] -= temp_gradient_y;
-        gradient[neigh_list[i][idx1]][2] -= temp_gradient_z;
+        for(int j = 0 ; j < 3 ; j++){
+            //gradient of atom B in the pair also have x y z component, but its gradient is the negative of the gradient of atom A
+            gradient[neigh_list[i][idx1]][j] -= - F_prime * vector[i][j];
+        }
 
     }
     return;
@@ -262,54 +265,55 @@ void fn_LJ_2nd_derivative(int** neigh_list,int neigh_size, double* neigh_distanc
 
 
 double fn_line_minimisation(double** atom_coords,double** G){
+     /*INITIALISE ARRAYS FOR ATOMS WHICH WILL BE SLIGHTLY DIPLACED FOR LINE MINIMISATION===============================*/
+
     double** little_displacement_atom_coords = (double **)malloc(fcc_atom_num * sizeof(double *));
     for (int i = 0; i < fcc_atom_num; i++){
         little_displacement_atom_coords[i] = (double *)malloc(3 * sizeof(double));
     }
+
     double row_num = fcc_atom_num * (fcc_atom_num - 1);
+
     int **neigh_list = (int **)malloc(row_num * sizeof(int *));
-    for (int j = 0; j < row_num; j++){
-        neigh_list[j] = (int *)malloc(2 * sizeof(int));
+    for (int i = 0; i < row_num; i++){
+        neigh_list[i] = (int *)malloc(2 * sizeof(int));
     }
+
     double **vector = (double **)malloc(row_num * sizeof(double *));
-    for (int l = 0; l < row_num; l++){
-        vector[l] = (double *)malloc(3 * sizeof(double));
+    for (int i = 0; i < row_num; i++){
+        vector[i] = (double *)malloc(3 * sizeof(double));
     }
+
     double *neigh_distance = (double*)malloc(row_num * sizeof(double));
+
     double **displaced_f = (double **)malloc(fcc_atom_num * sizeof(double *));
-    for (int k = 0; k < fcc_atom_num; k++){
-        displaced_f[k] = (double *)malloc(3 * sizeof(double));
+    for (int i = 0; i < fcc_atom_num; i++){
+        displaced_f[i] = (double *)malloc(3 * sizeof(double));
     }
 
-
-    for(int j = 0 ; j < fcc_atom_num ; j++){
-        for(int kk = 0 ; kk < 3 ; kk++){
-            little_displacement_atom_coords[j][kk]  = (SMALL_SIGMA * G[j][kk]) + atom_coords[j][kk];
+    //atom coords are shifted slightly
+    for(int i = 0 ; i < fcc_atom_num ; i++){
+        for(int j = 0 ; j < 3 ; j++){
+            little_displacement_atom_coords[i][j]  = (SMALL_SIGMA * G[i][j]) + atom_coords[i][j];
         }
     }
 
+    //create new neighbour list for the displaced atoms
     int displaced_neigh_num = fn_neighbour_list(neigh_list,little_displacement_atom_coords, fcc_atom_num, vector, neigh_distance);
-    //calculate the displaced f prime
-    fn_LJ_2nd_derivative(neigh_list,displaced_neigh_num,neigh_distance,vector,displaced_f,1,0);
 
-    //for(int ii = 0 ; ii < fcc_atom_num ; ii++){
-       // printf("%lf \t %lf \t %lf \n",G[ii][0], G[ii][1] , G[ii][2]);
-   // }
+    //calculate the displaced f prime
+    fn_LJ_derivative(neigh_list,displaced_neigh_num,neigh_distance,vector,displaced_f,1,0);
 
     //find numerator & denominator
     double numerator = 0 ; 
     double denominator = 0;
     double alpha;
-    for(int ii = 0 ; ii < fcc_atom_num ; ii++){
-        numerator += (G[ii][0] * G[ii][0]) + (G[ii][1] * G[ii][1]) + (G[ii][2] * G[ii][2]);
-        denominator += ((displaced_f[ii][0] + G[ii][0]) * G[ii][0]) + ((displaced_f[ii][1] + G[ii][1]) * G[ii][1]) + ((displaced_f[ii][2] + G[ii][2]) * G[ii][2]);
-        
+    for(int i = 0 ; i < fcc_atom_num ; i++){
+        numerator += (G[i][0] * G[i][0]) + (G[i][1] * G[i][1]) + (G[i][2] * G[i][2]);
+        denominator += ((displaced_f[i][0] + G[i][0]) * G[i][0]) + ((displaced_f[i][1] + G[i][1]) * G[i][1]) + ((displaced_f[i][2] + G[i][2]) * G[i][2]);
     }
 
-
-
     alpha =   SMALL_SIGMA * numerator / denominator;
-    //printf("denominator %e \n", denominator);
 
     free(little_displacement_atom_coords);
     free(displaced_f);
@@ -322,55 +326,70 @@ double fn_line_minimisation(double** atom_coords,double** G){
 
 
 int FN_SD(double** atom_coords,double* LJ_energy){
-
-
-
-
     double residual_magnitude = 1;
     int i = 0;
 
     while(i < i_max && residual_magnitude > 0.0001){
-            double row_num = fcc_atom_num * (fcc_atom_num - 1);
+
+        /*INITIALISE ARRAYS============================================================================
+        
+            neighbour_list = stores neighbour pair atom labels
+
+            position_vectors = stores the distance vector of the atom pair
+
+            neighbour_distance = the distance between the two atom pair
+
+            g = the gradient of the LJ potential at a atom's position
+        
+        */
+
+        double row_num = fcc_atom_num * (fcc_atom_num - 1);
+
         int **neighbour_list = (int **)malloc(row_num * sizeof(int *));
             for (int j = 0; j < row_num; j++){
                 neighbour_list[j] = (int *)malloc(2 * sizeof(int));
             }
 
         double **position_vector = (double **)malloc(row_num * sizeof(double *));
-            for (int l = 0; l < row_num; l++){
-                position_vector[l] = (double *)malloc(3 * sizeof(double));
+            for (int j = 0; j < row_num; j++){
+                position_vector[j] = (double *)malloc(3 * sizeof(double));
             }
 
         double *neighbour_distance = (double*)malloc(row_num * sizeof(double));
 
         double **g = (double **)malloc(fcc_atom_num * sizeof(double *));
-        for (int k = 0; k < fcc_atom_num; k++){
-            g[k] = (double *)malloc(3 * sizeof(double));
+        for (int j = 0; j < fcc_atom_num; j++){
+            g[j] = (double *)malloc(3 * sizeof(double));
         }
 
+        /*PERFORM A SINGLE SD STEP====================================================================*/
+
+        //obtain the neighbour list
         int neighbour_num = fn_neighbour_list(neighbour_list, atom_coords, fcc_atom_num , position_vector, neighbour_distance);
 
+        //store the LJ energy at this SD step
         LJ_energy[i] = fn_LJ_potential(neighbour_distance, neighbour_num);
-        residual_magnitude = 0;
 
-        fn_LJ_2nd_derivative(neighbour_list,neighbour_num,neighbour_distance,position_vector,g,0,1);
+        //obtain g by calculating the LJ derivative at all atom coordinates
+        fn_LJ_derivative(neighbour_list,neighbour_num,neighbour_distance,position_vector,g,0,1);
 
+        //obtain alpha through line minimisation
         double alpha = fn_line_minimisation(atom_coords,g);
 
-        for(int iii = 0; iii < fcc_atom_num ; iii++){
-            for(int jj = 0 ; jj < 3 ; jj++){
-                atom_coords[iii][jj] += alpha * g[iii][jj];
+        //shift all atom coordinates
+        for(int j = 0; j < fcc_atom_num ; j++){
+            for(int k = 0 ; k < 3 ; k++){
+                atom_coords[j][k] += alpha * g[j][k];
             }
         }
 
-
-        for(int jjj = 0; jjj < fcc_atom_num ; jjj++){
-            residual_magnitude += (alpha * alpha) * (g[jjj][0]*g[jjj][0] +  g[jjj][1]*g[jjj][1] +  g[jjj][2]*g[jjj][2]);
+        /*CALCULATE RESIDUAL MAGNITUDE TO CHECK IF ANOTHER SD STEP SHOULD BE TAKEN=====================*/
+        residual_magnitude = 0;
+        for(int j = 0; j < fcc_atom_num ; j++){
+            residual_magnitude += (alpha * alpha) * (g[j][0]*g[j][0] +  g[j][1]*g[j][1] +  g[j][2]*g[j][2]);
     
         }
 
-
-        printf("alpha = %e \t resid mag = %e\n", alpha, residual_magnitude);
 
         i++;
 
@@ -382,7 +401,6 @@ int FN_SD(double** atom_coords,double* LJ_energy){
     }
 
     FILE_WRITING(FINAL_STR ,atom_coords,fcc_atom_num);
-
     return i;
 }
 
